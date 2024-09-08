@@ -1,0 +1,26 @@
+on:
+  release:
+    types: [created]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [wasm32-wasi]
+    steps:
+      - uses: actions/checkout@master
+      - uses: Swatinem/rust-cache@v2.7.3
+
+      - name: rustup setup
+        run:
+          rustup target add wasm32-wasi
+      - name: cargo build
+        run:
+          cargo build --lib --profile super-release --target wasm32-wasi
+
+      - name: Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: ./target/wasm32-wasi/super-release/onefmt_biome.wasm
+          asset_name: onefmt_biome.wasm
