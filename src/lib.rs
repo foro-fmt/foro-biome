@@ -1,8 +1,8 @@
 mod format;
 
 use crate::format::{format, FormatResult};
-use onefmt_plugin_utils::data_json_utils::JsonGetter;
-use onefmt_plugin_utils::onefmt_plugin_setup;
+use foro_plugin_utils::data_json_utils::JsonGetter;
+use foro_plugin_utils::foro_plugin_setup;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
@@ -43,4 +43,4 @@ pub fn main_with_json(input: Value) -> Value {
     result
 }
 
-onefmt_plugin_setup!(main_with_json);
+foro_plugin_setup!(main_with_json);
