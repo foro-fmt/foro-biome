@@ -1,6 +1,6 @@
 [package]
 name = "foro-biome"
-version = "0.1.0"
+version = "0.3.3"
 edition = "2021"
 
 [lib]
@@ -15,9 +15,9 @@ lto = "fat"
 panic = "abort"
 
 [dependencies]
-biome_service = { git = "https://github.com/biomejs/biome/", branch = "main", portion = "crates/biome_service" }
-biome_fs = { git = "https://github.com/biomejs/biome/", branch = "main", portion = "crates/biome_fs" }
-biome_configuration = { git = "https://github.com/biomejs/biome/", branch = "main", portion = "crates/biome_configuration" }
+biome_service = { git = "https://github.com/biomejs/biome/", branch = "main" }
+biome_fs = { git = "https://github.com/biomejs/biome/", branch = "main" }
+biome_configuration = { git = "https://github.com/biomejs/biome/", branch = "main" }
 serde_json = "1.0.127"
-foro-plugin-utils = { git = "https://github.com/nahco314/foro-plugin-utils", version = "0.1.0" }
+foro-plugin-utils = { git = "https://github.com/nahco314/foro-plugin-utils", version = "0.2.0" }
 anyhow = "1.0.86"

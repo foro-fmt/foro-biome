@@ -1131,7 +1131,7 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foro-biome"
-version = "0.1.0"
+version = "0.3.3"
 dependencies = [
  "anyhow",
  "biome_configuration",
@@ -1143,8 +1143,8 @@ dependencies = [
 
 [[package]]
 name = "foro-plugin-utils"
-version = "0.1.0"
-source = "git+https://github.com/nahco314/foro-plugin-utils#ddd01eea1ccc109c3b59b1b59614b416c5bc4adc"
+version = "0.2.0"
+source = "git+https://github.com/nahco314/foro-plugin-utils#17a4bc23175516059862b78ac91dc33afa4d3620"
 dependencies = [
  "anyhow",
  "serde_json",
