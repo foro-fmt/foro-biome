@@ -1,6 +1,7 @@
 mod format;
 
 use crate::format::{format, FormatResult};
+use foro_plugin_utils::compat_util::get_target;
 use foro_plugin_utils::data_json_utils::JsonGetter;
 use foro_plugin_utils::foro_plugin_setup;
 use serde_json::{json, Value};
@@ -9,7 +10,7 @@ use std::path::PathBuf;
 pub fn main_with_json(input: Value) -> Value {
     let start = std::time::Instant::now();
 
-    let target = String::get_value(&input, ["target"]).unwrap();
+    let target = get_target(&input).unwrap();
     let target_content = String::get_value(&input, ["target-content"]).unwrap();
     let current_dir = PathBuf::from(String::get_value(&input, ["current-dir"]).unwrap());
 
