@@ -1,27 +1,15 @@
 use anyhow::{anyhow, Result};
 use biome_configuration::ConfigurationPathHint;
-use biome_fs::{BiomePath, FileSystem, OsFileSystem};
-use biome_service::configuration::{
-    load_configuration, LoadedConfiguration, PartialConfigurationExt,
-};
+use biome_fs::{BiomePath, OsFileSystem};
+use biome_resolver::FsWithResolverProxy;
+use biome_service::configuration::{load_configuration, LoadedConfiguration};
+use biome_service::workspace;
 use biome_service::workspace::{
-    FeaturesBuilder, FormatFileParams, OpenFileParams, RegisterProjectFolderParams,
+    FeaturesBuilder, FileContent, FormatFileParams, OpenFileParams, OpenProjectParams,
     SupportsFeatureParams, UpdateSettingsParams,
 };
-use biome_service::{workspace, DynRef};
-use std::path::{Path, PathBuf};
-
-fn resolve_manifest(fs: &DynRef<'_, dyn FileSystem>) -> Result<Option<(BiomePath, String)>> {
-    match fs.auto_search(
-        &fs.working_directory().unwrap_or_default(),
-        &["package.json"],
-        false,
-    ) {
-        Ok(Some(result)) => Ok(Some((BiomePath::new(result.file_path), result.content))),
-        Ok(None) => Ok(None),
-        Err(e) => Err(anyhow!(e)),
-    }
-}
+use camino::{Utf8Path, Utf8PathBuf};
+use std::path::PathBuf;
 
 pub enum FormatResult {
     Success { formatted_content: String },
@@ -34,57 +22,68 @@ pub fn format(
     file_content: String,
     current_dir: PathBuf,
 ) -> Result<FormatResult> {
-    let workspace = workspace::server();
+    // Convert PathBuf to Utf8PathBuf
+    let current_dir_utf8 = Utf8PathBuf::from_path_buf(current_dir.clone())
+        .map_err(|_| anyhow!("Path contains invalid UTF-8"))?;
 
-    let fs = OsFileSystem::new(current_dir.clone());
-    let dfs: &DynRef<'_, dyn FileSystem> = &DynRef::Owned(Box::new(fs));
+    let fs: Box<dyn FsWithResolverProxy> = Box::new(OsFileSystem::new(current_dir_utf8.clone()));
+    let workspace = workspace::server(fs, None);
 
     let LoadedConfiguration {
         configuration: biome_configuration,
-        directory_path: configuration_path,
         ..
-    } = load_configuration(dfs, ConfigurationPathHint::None)?;
+    } = load_configuration(
+        &*workspace.fs(),
+        ConfigurationPathHint::FromWorkspace(current_dir_utf8.clone()),
+    )?;
 
-    workspace.register_project_folder(RegisterProjectFolderParams {
-        set_as_current_workspace: true,
-        path: Some(current_dir),
+    // Open the project
+    let open_project_result = workspace.open_project(OpenProjectParams {
+        path: BiomePath::new(&current_dir_utf8),
+        open_uninitialized: true,
+        only_rules: None,
+        skip_rules: None,
     })?;
 
-    let vcs_base_path = configuration_path.or(dfs.working_directory());
-    let (vcs_base_path, gitignore_matches) =
-        biome_configuration.retrieve_gitignore_matches(dfs, vcs_base_path.as_deref())?;
+    let project_key = open_project_result.project_key;
 
-    let manifest_data = resolve_manifest(dfs)?;
-
-    if let Some(manifest_data) = manifest_data {
-        workspace.set_manifest_for_project(manifest_data.into())?;
-    }
-
+    // Update settings for the project
     workspace.update_settings(UpdateSettingsParams {
-        workspace_directory: dfs.working_directory(),
+        project_key,
         configuration: biome_configuration,
-        vcs_base_path,
-        gitignore_matches,
+        workspace_directory: workspace.fs().working_directory().map(BiomePath::new),
     })?;
 
+    let file_path = BiomePath::new(Utf8Path::new(&given_file_name));
+
+    // Check if the file supports formatting
     let file_features = workspace.file_features(SupportsFeatureParams {
-        path: BiomePath::new(Path::new(&given_file_name)),
+        project_key,
+        path: file_path.clone(),
         features: FeaturesBuilder::new().with_formatter().build(),
     })?;
 
-    if !file_features.is_supported() {
+    // Check specifically if the Format feature is supported
+    let format_support =
+        file_features.support_kind_for(&biome_service::workspace::FeatureKind::Format);
+
+    if !format_support.map(|s| s.is_supported()).unwrap_or(false) {
         return Ok(FormatResult::Ignored);
     }
 
+    // Open the file with content from client
     workspace.open_file(OpenFileParams {
-        path: BiomePath::new(Path::new(&given_file_name)),
-        content: file_content,
-        version: 0,
+        project_key,
+        path: file_path.clone(),
+        content: FileContent::from_client(file_content),
         document_file_source: None,
+        persist_node_cache: false,
     })?;
 
+    // Format the file
     let res = workspace.format_file(FormatFileParams {
-        path: BiomePath::new(Path::new(&given_file_name)),
+        project_key,
+        path: file_path,
     });
 
     match res {

@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 
 pub fn main_with_json(input: Value) -> Value {
-    let start = std::time::Instant::now();
+    let _start = std::time::Instant::now();
 
     let target = String::get_value(&input, ["target"]).unwrap();
     let target_content = String::get_value(&input, ["target-content"]).unwrap();
@@ -38,7 +38,7 @@ pub fn main_with_json(input: Value) -> Value {
         }
     };
 
-    println!("time: {:?}", start.elapsed());
+    // println!("time: {:?}", start.elapsed());
 
     result
 }
