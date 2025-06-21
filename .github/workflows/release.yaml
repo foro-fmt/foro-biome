@@ -14,9 +14,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: 'ubuntu-latest'
+          - runner: 'ubuntu-24.04'
+            container: 'buildpack-deps:focal'
             target: 'x86_64-unknown-linux-gnu'
-          - runner: 'ubuntu-latest'
+          - runner: 'ubuntu-24.04'
+            container: 'buildpack-deps:focal'
             target: 'wasm32-wasip1'
           - runner: 'macos-13'
             target: 'x86_64-apple-darwin'
@@ -25,6 +27,7 @@ jobs:
           - runner: 'windows-2022'
             target: 'x86_64-pc-windows-msvc'
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
