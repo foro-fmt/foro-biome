@@ -35,6 +35,7 @@ jobs:
       #        run: |
       #          git config --global core.longpaths true
       - uses: actions/checkout@master
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: astral-sh/setup-uv@v6
       - name: Install jq
         if: matrix.container == 'buildpack-deps:focal'
