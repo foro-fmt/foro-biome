@@ -153,8 +153,10 @@ Update only what is required:
 
 Versioning rule for this repo:
 
-- use the next patch release for follow-up fixes on the same formatter line
-- if the user asked for "move to 0.x.y", bump into that series first, then use further patch bumps for release-fix iterations
+- **Upstream tracking release**: use the upstream `biome` version as the plugin version tag verbatim (e.g., biome `2.4.8` → tag `2.4.8`).
+- **Plugin-only fix** (bug fix, foro ABI change, packaging fix — no upstream version change): append `-<n>` to the last upstream version, where n starts at 1 and increments (e.g., `2.4.8-1`, `2.4.8-2`).
+- When a new upstream tracking release happens, n resets — the bare upstream version is used again.
+- Semver ordering is intentionally not preserved for the `-<n>` suffix. These tags are GitHub release identifiers, not semver coordinates.
 
 ## Step 4: Local Validation
 
