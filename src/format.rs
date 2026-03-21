@@ -10,6 +10,7 @@ use biome_service::workspace::{
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 pub enum FormatResult {
     Success { formatted_content: String },
@@ -26,11 +27,12 @@ pub fn format(
     let current_dir_utf8 = Utf8PathBuf::from_path_buf(current_dir.clone())
         .map_err(|_| anyhow!("Path contains invalid UTF-8"))?;
 
-    let fs: Box<dyn FsWithResolverProxy> = Box::new(OsFileSystem::new(current_dir_utf8.clone()));
+    let fs: Arc<dyn FsWithResolverProxy> = Arc::new(OsFileSystem::new(current_dir_utf8.clone()));
     let workspace = workspace::server(fs, None);
 
     let LoadedConfiguration {
         configuration: biome_configuration,
+        extended_configurations,
         ..
     } = load_configuration(
         &*workspace.fs(),
@@ -41,8 +43,6 @@ pub fn format(
     let open_project_result = workspace.open_project(OpenProjectParams {
         path: BiomePath::new(&current_dir_utf8),
         open_uninitialized: true,
-        only_rules: None,
-        skip_rules: None,
     })?;
 
     let project_key = open_project_result.project_key;
@@ -52,6 +52,11 @@ pub fn format(
         project_key,
         configuration: biome_configuration,
         workspace_directory: workspace.fs().working_directory().map(BiomePath::new),
+        extended_configurations: extended_configurations
+            .into_iter()
+            .map(|(path, configuration)| (BiomePath::new(path), configuration))
+            .collect(),
+        module_graph_resolution_kind: Default::default(),
     })?;
 
     let file_path = BiomePath::new(Utf8Path::new(&given_file_name));
@@ -61,13 +66,12 @@ pub fn format(
         project_key,
         path: file_path.clone(),
         features: FeaturesBuilder::new().with_formatter().build(),
+        inline_config: None,
+        skip_ignore_check: false,
+        not_requested_features: Default::default(),
     })?;
 
-    // Check specifically if the Format feature is supported
-    let format_support =
-        file_features.support_kind_for(&biome_service::workspace::FeatureKind::Format);
-
-    if !format_support.map(|s| s.is_supported()).unwrap_or(false) {
+    if !file_features.features_supported.supports_format() {
         return Ok(FormatResult::Ignored);
     }
 
@@ -78,12 +82,14 @@ pub fn format(
         content: FileContent::from_client(file_content),
         document_file_source: None,
         persist_node_cache: false,
+        inline_config: None,
     })?;
 
     // Format the file
     let res = workspace.format_file(FormatFileParams {
         project_key,
         path: file_path,
+        inline_config: None,
     });
 
     match res {
